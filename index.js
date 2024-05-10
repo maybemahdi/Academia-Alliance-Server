@@ -36,6 +36,12 @@ async function run() {
       .db("academiaAlliance")
       .collection("assignments");
 
+    const submittedAssignmentCollection = client
+      .db("academiaAlliance")
+      .collection("submittedAssignment");
+
+    // create assignment crud api's
+
     app.post("/add-assignment", async (req, res) => {
       const data = req.body;
       // return console.log(data)
@@ -77,6 +83,14 @@ async function run() {
         updateDoc,
         options
       );
+      res.send(result);
+    });
+
+    //submit assignment crud api's
+
+    app.post("/submit-assignment", async (req, res) => {
+      const data = req.body;
+      const result = await submittedAssignmentCollection.insertOne(data);
       res.send(result);
     });
 
