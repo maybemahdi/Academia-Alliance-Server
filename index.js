@@ -101,6 +101,35 @@ async function run() {
       res.send(result);
     });
 
+    //get pending assignments
+    app.get("/pending-assignments", async (req, res) => {
+      const queryStatus = req.query.status;
+      const query = { status: queryStatus };
+      const result = await submittedAssignmentCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    //update seen assignment
+    app.put("/update-marks/:id", async (req, res) => {
+      const id = req.params.id;
+      const data = req.body;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          obtainedMarks: data.obtainedMarks,
+          feedback: data.feedback,
+          status: data.status,
+        },
+      };
+      const result = await submittedAssignmentCollection.updateOne(
+        filter,
+        updateDoc,
+        options
+      );
+      res.send(result);
+    });
+
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     console.log(
