@@ -156,6 +156,11 @@ async function run() {
       res.send(result);
     });
 
+    app.get("/submitted-assignments", async (req, res) => {
+      const result = await submittedAssignmentCollection.find().toArray();
+      res.send(result);
+    });
+
     // auth related api
     app.post("/jwt", async (req, res) => {
       const user = req.body;
