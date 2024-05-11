@@ -70,7 +70,16 @@ async function run() {
     });
 
     app.get("/assignments", async (req, res) => {
-      const result = await assignmentCollection.find().toArray();
+      const page = parseFloat(req.query.page);
+      const size = parseFloat(req.query.size);
+      const filter = req.query.filter;
+      let query = {};
+      if (filter) query.difficulty = filter;
+      const result = await assignmentCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     });
 
@@ -179,6 +188,37 @@ async function run() {
     app.get("/logout", async (req, res) => {
       res.clearCookie("token", { maxAge: 0 }).send({ success: true });
     });
+
+    //pagination related api
+    //get assignment count
+    app.get("/getCount", async (req, res) => {
+      const filter = req.query.filter;
+      let query = {};
+      if (filter) query.difficulty = filter;
+      const count = await assignmentCollection.countDocuments(query);
+      res.send({ count });
+    });
+
+    //get filtered jobs for filtering and pagination
+    // app.get("/all-job", async (req, res) => {
+    //   const page = parseFloat(req.query.page);
+    //   const size = parseFloat(req.query.size);
+    //   const filter = req.query.filter;
+    //   const sort = req.query.sort;
+    //   const search = req.query.search;
+    //   let query = {
+    //     job_title: { $regex: search, $options: "i" },
+    //   };
+    //   if (filter) query.category = filter;
+    //   let options = {};
+    //   if (sort) options = { sort: { deadline: sort === "asc" ? 1 : -1 } };
+    //   const result = await jobCollection
+    //     .find(query, options)
+    //     .skip(page * size)
+    //     .limit(size)
+    //     .toArray();
+    //   res.send(result);
+    // });
 
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
