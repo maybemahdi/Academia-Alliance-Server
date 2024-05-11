@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const app = express();
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const port = process.env.PORT || 5000;
 require("dotenv").config();
 
@@ -13,7 +15,7 @@ const corsOptions = {
 //middlewares
 app.use(cors(corsOptions));
 app.use(express.json());
-// app.use(cookieParser());
+app.use(cookieParser());
 
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.nrdgddr.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -26,6 +28,21 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+//my middlewares
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized Access" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: "Unauthorized Access" });
+    }
+    req.user = decoded;
+    next();
+  });
+};
 
 async function run() {
   try {
@@ -42,9 +59,12 @@ async function run() {
 
     // create assignment crud api's
 
-    app.post("/add-assignment", async (req, res) => {
+    app.post("/add-assignment", verifyToken, async (req, res) => {
       const data = req.body;
       // return console.log(data)
+      if (req.user.email !== data.assignment_creator) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
       const result = await assignmentCollection.insertOne(data);
       res.send(result);
     });
@@ -68,7 +88,7 @@ async function run() {
       res.send(result);
     });
 
-    app.put("/update-assignment/:id", async (req, res) => {
+    app.put("/update-assignment/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const data = req.body;
       const filter = { _id: new ObjectId(id) };
@@ -88,21 +108,27 @@ async function run() {
 
     //submit assignment crud api's
 
-    app.post("/submit-assignment", async (req, res) => {
+    app.post("/submit-assignment", verifyToken, async (req, res) => {
       const data = req.body;
+      if (req.user.email !== data.examineeEmail) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
       const result = await submittedAssignmentCollection.insertOne(data);
       res.send(result);
     });
 
-    app.get("/mySubmitted", async (req, res) => {
+    app.get("/mySubmitted", verifyToken, async (req, res) => {
       const email = req.query.email;
+      if (req.user.email !== email) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
       const query = { examineeEmail: email };
       const result = await submittedAssignmentCollection.find(query).toArray();
       res.send(result);
     });
 
     //get pending assignments
-    app.get("/pending-assignments", async (req, res) => {
+    app.get("/pending-assignments", verifyToken, async (req, res) => {
       const queryStatus = req.query.status;
       const query = { status: queryStatus };
       const result = await submittedAssignmentCollection.find(query).toArray();
@@ -128,6 +154,25 @@ async function run() {
         options
       );
       res.send(result);
+    });
+
+    // auth related api
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: "1d",
+      });
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+        })
+        .send({ success: true });
+    });
+
+    app.get("/logout", async (req, res) => {
+      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
     });
 
     // Send a ping to confirm a successful connection
