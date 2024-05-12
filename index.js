@@ -63,7 +63,8 @@ async function run() {
       .collection("submittedAssignment");
 
     // create assignment crud api's
-
+    
+    // post method
     app.post("/add-assignment", verifyToken, async (req, res) => {
       const data = req.body;
       // return console.log(data)
@@ -144,6 +145,11 @@ async function run() {
     //get pending assignments
     app.get("/pending-assignments", verifyToken, async (req, res) => {
       const queryStatus = req.query.status;
+      const email = req.query.email;
+      // console.log(email, req.user.email)
+      if (req.user.email !== email) {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
       const query = { status: queryStatus };
       const result = await submittedAssignmentCollection.find(query).toArray();
       res.send(result);
@@ -170,7 +176,7 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/submitted-assignments", async (req, res) => {
+    app.get("/submitted-assignments", verifyToken, async (req, res) => {
       const result = await submittedAssignmentCollection.find().toArray();
       res.send(result);
     });
