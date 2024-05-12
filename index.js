@@ -7,7 +7,12 @@ const port = process.env.PORT || 5000;
 require("dotenv").config();
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:5174"],
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "https://academia-alliance.web.app",
+    "https://academia-alliance.firebaseapp.com",
+  ],
   credentials: true,
   optionSuccessStatus: 200,
 };
