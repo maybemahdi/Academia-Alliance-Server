@@ -190,7 +190,9 @@ async function run() {
         .send({ success: true });
     });
 
-    app.get("/logout", async (req, res) => {
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("logging out", user);
       res
         .clearCookie("token", {
           maxAge: 0,
