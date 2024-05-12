@@ -191,7 +191,13 @@ async function run() {
     });
 
     app.get("/logout", async (req, res) => {
-      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+      res
+        .clearCookie("token", {
+          maxAge: 0,
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          secure: true,
+        })
+        .send({ success: true });
     });
 
     //pagination related api
