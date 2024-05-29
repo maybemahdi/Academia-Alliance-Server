@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
 const port = process.env.PORT || 5000;
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const corsOptions = {
   origin: [
@@ -62,8 +63,12 @@ async function run() {
       .db("academiaAlliance")
       .collection("submittedAssignment");
 
+    const paymentCollection = client
+      .db("academiaAlliance")
+      .collection("payments");
+
     // create assignment crud api's
-    
+
     // post method
     app.post("/add-assignment", verifyToken, async (req, res) => {
       const data = req.body;
@@ -216,6 +221,29 @@ async function run() {
       if (filter) query.difficulty = filter;
       const count = await assignmentCollection.countDocuments(query);
       res.send({ count });
+    });
+
+    app.post("/create-payment-intent", async (req, res) => {
+      const { payAmount } = req.body;
+      const paySent = parseFloat(payAmount) * 100;
+      if (!payAmount || payAmount < 1) return;
+      // generate clientSecret
+      const { client_secret } = await stripe.paymentIntents.create({
+        amount: paySent,
+        currency: "usd",
+        // In the latest version of the API, specifying the `automatic_payment_methods` parameter is optional because Stripe enables its functionality by default.
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+      // send client secret as response
+      res.send({ clientSecret: client_secret });
+    });
+
+    app.post("/payment", async (req, res) => {
+      const paymentInfo = req.body;
+      const result = await paymentCollection.insertOne(paymentInfo);
+      res.send(result);
     });
 
     //get filtered jobs for filtering and pagination
